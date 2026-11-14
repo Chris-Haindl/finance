@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Depot- & Entnahmesimulation | flatex Austria</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent-hover: #0ea5e9;
+            --border: #334155;
+            --success: #22c55e;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        header h1 {
+            margin: 0 0 10px 0;
+            font-size: 2rem;
+            color: var(--accent);
+        }
+        header p {
+            color: var(--text-muted);
+            margin: 0;
+            font-size: 1.1rem;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 24px;
+        }
+        @media (max-width: 1000px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        }
+        .card h2 {
+            margin-top: 0;
+            font-size: 1.3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+            color: var(--text-color);
+        }
+        .control-group {
+            margin-bottom: 20px;
+        }
+        .control-group label {
+            display: block;
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+        .control-group input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent);
+            cursor: pointer;
+            height: 6px;
+            background: var(--bg-color);
+            border-radius: 3px;
+        }
+        .control-group input[type="number"] {
+            width: 100%;
+            padding: 10px 14px;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-color);
+            font-size: 1.1rem;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .control-group input[type="number"]:focus {
+            border-color: var(--accent);
+        }
+        .value-display {
+            font-weight: bold;
+            color: var(--accent);
+            float: right;
+            font-size: 1rem;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-box {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+        }
+        .stat-box .label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+        .stat-box .value {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: var(--success);
+        }
+        .chart-container {
+            position: relative;
+            height: 480px;
+            width: 100%;
+            background-color: var(--bg-color);
+            border-radius: 8px;
+            padding: 12px;
+            border: 1px solid var(--border);
+            box-sizing: border-box;
+        }
+        .info-box {
+            background-color: rgba(56, 189, 248, 0.1);
+            border-left: 4px solid var(--accent);
+            padding: 12px 16px;
+            border-radius: 0 8px 8px 0;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-top: 20px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>flatex Depot- & Entnahmesimulation</h1>
+            <p>280.000 € Einmalzahlung | 2.400 € mtl. Sparrate (9,5 Jahre Ansparphase)</p>
+        </header>
+
+        <div class="grid">
+            <!-- Controls -->
+            <div class="card">
+                <h2>Parameter anpassen</h2>
+                
+                <div class="control-group">
+                    <label for="returnRate">Bruttorendite p.a.: <span id="returnRateVal" class="value-display">8.0%</span></label>
+                    <input type="range" id="returnRate" min="2.0" max="14.0" step="0.1" value="8.0">
+                </div>
+
+                <div class="control-group">
+                    <label for="withdrawal">Jährliche Netto-Entnahme (€):</label>
+                    <input type="number" id="withdrawal" min="0" max="200000" step="5000" value="50000">
+                </div>
+
+                <div class="control-group">
+                    <label for="years">Beobachtungshorizont (Jahre): <span id="yearsVal" class="value-display">45</span></label>
+                    <input type="range" id="years" min="15" max="50" step="1" value="45">
+                </div>
+
+                <hr style="border: 0; border-top: 1px solid var(--border); margin: 24px 0;">
+
+                <div class="stat-box" style="margin-bottom: 0;">
+                    <div class="label">Depotwert nach Ansparphase (9,5 J.)</div>
+                    <div id="savingsEndVal" class="value" style="color: var(--accent); font-size: 1.2rem;">0 €</div>
+                </div>
+
+                <div class="info-box">
+                    <strong>Hinweis:</strong> Ab dem 10. Jahr erfolgt jeweils am Jahresanfang die gewünschte Netto-Entnahme (abzgl. 27,5% KESt auf den Gewinnanteil).
+                </div>
+            </div>
+
+            <!-- Results & Chart -->
+            <div class="card">
+                <h2>Vermögensverlauf über <span id="yearsHeaderVal">45</span> Jahre</h2>
+                
+                <div class="stats">
+                    <div class="stat-box">
+                        <div class="label">Gesamt-Netto-Entnahmen</div>
+                        <div id="totalWithdrawnVal" class="value" style="color: var(--accent);">0 €</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="label">Depotwert am Ende</div>
+                        <div id="finalBalanceVal" class="value">0 €</div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <canvas id="simulationChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let myChart = null;
+
+        function runSimulation() {
+            const grossReturn = parseFloat(document.getElementById('returnRate').value) / 100;
+            const annualWithdrawal = parseFloat(document.getElementById('withdrawal').value);
+            const totalYears = parseInt(document.getElementById('years').value);
+
+            document.getElementById('returnRateVal').innerText = (grossReturn * 100).toFixed(1) + '%';
+            document.getElementById('yearsVal').innerText = totalYears;
+            document.getElementById('yearsHeaderVal').innerText = totalYears;
+
+            const initial = 280000.0;
+            const monthly = 2400.0;
+            const monthsSavings = Math.round(9.5 * 12); // 114 months
+
+            const ter = 0.0012;
+            const netAnnualReturn = grossReturn - ter;
+            const r_m = Math.pow(1 + netAnnualReturn, 1 / 12) - 1;
+
+            let balance = initial;
+            let totalCostBasis = initial;
+            let monthCounter = 0;
+
+            let labels = [];
+            let balances = [];
+            let totalWithdrawnNet = 0;
+            let savingsEndBalance = 0;
+
+            for (let year = 1; year <= totalYears; year++) {
+                // Annual withdrawal at the start of the year (from year 10 onwards)
+                if (year >= 10) {
+                    const gainFraction = balance > 0 ? Math.max(0.0, (balance - totalCostBasis) / balance) : 0.0;
+                    const taxRate = 0.275;
+                    const denom = (1.0 - gainFraction * taxRate);
+                    const grossWithdrawal = denom > 0 ? annualWithdrawal / denom : annualWithdrawal;
+                    const tax = grossWithdrawal * gainFraction * taxRate;
+
+                    if (balance >= grossWithdrawal) {
+                        balance -= grossWithdrawal;
+                        totalCostBasis -= (grossWithdrawal - tax);
+                        if (totalCostBasis < 0) totalCostBasis = 0;
+                        totalWithdrawnNet += annualWithdrawal;
+                    } else {
+                        totalWithdrawnNet += balance * (1 - gainFraction * taxRate);
+                        balance = 0;
+                        totalCostBasis = 0;
+                    }
+                }
+
+                // 12 months growth & contributions
+                for (let m = 0; m < 12; m++) {
+                    if (monthCounter < monthsSavings) {
+                        const fee = 1.50;
+                        balance = (balance - fee) * (1 + r_m) + monthly;
+                        totalCostBasis += (monthly - fee);
+                    } else {
+                        balance = balance * (1 + r_m);
+                    }
+                    monthCounter++;
+                }
+
+                if (year === 10) {
+                    savingsEndBalance = balance + annualWithdrawal;
+                }
+
+                labels.push('Jahr ' + year);
+                balances.push(Math.round(balance));
+            }
+
+            const approxSavingsEnd = balances[9] ? balances[9] : balance;
+            document.getElementById('savingsEndVal').innerText = approxSavingsEnd.toLocaleString('de-DE', {maximumFractionDigits: 0}) + ' €';
+            document.getElementById('totalWithdrawnVal').innerText = totalWithdrawnNet.toLocaleString('de-DE', {maximumFractionDigits: 0}) + ' €';
+            document.getElementById('finalBalanceVal').innerText = balances[balances.length - 1].toLocaleString('de-DE', {maximumFractionDigits: 0}) + ' €';
+
+            updateChart(labels, balances);
+        }
+
+        function updateChart(labels, data) {
+            const ctx = document.getElementById('simulationChart').getContext('2d');
+            if (myChart) {
+                myChart.data.labels = labels;
+                myChart.data.datasets[0].data = data;
+                myChart.update();
+            } else {
+                myChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Depotwert (Netto nach KESt)',
+                            data: data,
+                            borderColor: '#38bdf8',
+                            backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.2,
+                            pointRadius: 2,
+                            pointHoverRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                labels: { color: '#f8fafc', font: { size: 12 } }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let value = context.parsed.y;
+                                        return ' Depotwert: ' + value.toLocaleString('de-DE') + ' €';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: { color: '#94a3b8', maxTicksLimit: 12 },
+                                grid: { color: '#334155' }
+                            },
+                            y: {
+                                ticks: {
+                                    color: '#94a3b8',
+                                    callback: function(value) {
+                                        return (value / 1000).toLocaleString('de-DE') + ' T€';
+                                    }
+                                },
+                                grid: { color: '#334155' }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        document.getElementById('returnRate').addEventListener('input', runSimulation);
+        document.getElementById('withdrawal').addEventListener('input', runSimulation);
+        document.getElementById('years').addEventListener('input', runSimulation);
+
+        runSimulation();
+    </script>
+</body>
+</html>
