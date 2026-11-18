@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>flatex Depot- & Entnahmesimulation mit KESt-Berechnung</title>
+    <title>flatex Depot- & Entnahmesimulation mit KESt-Ausweis</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -222,6 +222,9 @@
 
     <script>
         let myChart = null;
+        let globalBalances = [];
+        let globalKest = [];
+        let globalWithdrawals = [];
 
         function runSimulation() {
             const grossReturn = parseFloat(document.getElementById('returnRate').value) / 100;
@@ -245,14 +248,16 @@
             let monthCounter = 0;
 
             let labels = [];
-            let balances = [];
-            let kestPerYear = [];
+            globalBalances = [];
+            globalKest = [];
+            globalWithdrawals = [];
             let totalWithdrawnNet = 0;
             let totalKestPaid = 0;
             let savingsEndBalance = 0;
 
             for (let year = 1; year <= totalYears; year++) {
                 let kestThisYear = 0;
+                let withdrawnThisYear = 0;
 
                 // Annual withdrawal at the start of the year (from year 10 onwards)
                 if (year >= 10) {
@@ -267,12 +272,14 @@
                         totalCostBasis -= (grossWithdrawal - tax);
                         if (totalCostBasis < 0) totalCostBasis = 0;
                         totalWithdrawnNet += annualWithdrawal;
+                        withdrawnThisYear = annualWithdrawal;
                         kestThisYear = tax;
                         totalKestPaid += tax;
                     } else {
                         const actualNet = balance * (1 - gainFraction * taxRate);
                         const actualTax = balance * gainFraction * taxRate;
                         totalWithdrawnNet += actualNet;
+                        withdrawnThisYear = actualNet;
                         kestThisYear = actualTax;
                         totalKestPaid += actualTax;
                         balance = 0;
@@ -293,21 +300,22 @@
                 }
 
                 if (year === 10) {
-                    savingsEndBalance = balance + annualWithdrawal;
+                    savingsEndBalance = balance + withdrawnThisYear;
                 }
 
                 labels.push('Jahr ' + year);
-                balances.push(Math.round(balance));
-                kestPerYear.push(Math.round(kestThisYear));
+                globalBalances.push(Math.round(balance));
+                globalKest.push(Math.round(kestThisYear));
+                globalWithdrawals.push(Math.round(withdrawnThisYear));
             }
 
-            const approxSavingsEnd = balances[9] ? balances[9] : balance;
+            const approxSavingsEnd = globalBalances[9] ? globalBalances[9] : balance;
             document.getElementById('savingsEndVal').innerText = approxSavingsEnd.toLocaleString('de-DE', {maximumFractionDigits: 0}) + ' €';
             document.getElementById('totalWithdrawnVal').innerText = totalWithdrawnNet.toLocaleString('de-DE', {maximumFractionDigits: 0}) + ' €';
             document.getElementById('totalKestVal').innerText = totalKestPaid.toLocaleString('de-DE', {maximumFractionDigits: 0}) + ' €';
-            document.getElementById('finalBalanceVal').innerText = balances[balances.length - 1].toLocaleString('de-DE', {maximumFractionDigits: 0}) + ' €';
+            document.getElementById('finalBalanceVal').innerText = globalBalances[globalBalances.length - 1].toLocaleString('de-DE', {maximumFractionDigits: 0}) + ' €';
 
-            updateChart(labels, balances, kestPerYear);
+            updateChart(labels, globalBalances, globalKest);
         }
 
         function updateChart(labels, balances, kestData) {
@@ -352,11 +360,30 @@
                                 labels: { color: '#0f172a', font: { size: 12 } }
                             },
                             tooltip: {
+                                backgroundColor: '#0f172a',
+                                titleFont: { size: 14, weight: 'bold' },
+                                bodyFont: { size: 13 },
+                                padding: 12,
                                 callbacks: {
+                                    title: function(context) {
+                                        return context[0].label; // e.g. "Jahr 15"
+                                    },
                                     label: function(context) {
-                                        let value = context.parsed.y;
-                                        let label = context.dataset.label || '';
-                                        return ' ' + label + ': ' + value.toLocaleString('de-DE') + ' €';
+                                        const idx = context.dataIndex;
+                                        const datasetIndex = context.datasetIndex;
+                                        const bal = globalBalances[idx].toLocaleString('de-DE') + ' €';
+                                        const kest = globalKest[idx].toLocaleString('de-DE') + ' €';
+                                        const wd = globalWithdrawals[idx].toLocaleString('de-DE') + ' €';
+                                        
+                                        if (datasetIndex === 0) {
+                                            return [
+                                                ' 📊 Depotwert: ' + bal,
+                                                ' 💸 Netto-Entnahme: ' + (globalWithdrawals[idx] > 0 ? wd : '0 € (Ansparphase)'),
+                                                ' 🏛️ KESt in diesem Jahr: ' + kest
+                                            ];
+                                        } else {
+                                            return null; // hide duplicate bar tooltip since line tooltip already covers all 3 metrics
+                                        }
                                     }
                                 }
                             }
